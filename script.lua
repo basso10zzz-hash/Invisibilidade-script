@@ -3,6 +3,10 @@ local LocalPlayer = Players.LocalPlayer
 local UserInputService = game:GetService("UserInputService")
 
 local isMinimized = false
+local dragging = false
+local dragInput
+local dragStart
+local startPos
 
 local function MakeInvisible()
     local char = LocalPlayer.Character
@@ -17,6 +21,12 @@ local function MakeInvisible()
     local humanoid = char:FindFirstChild("Humanoid")
     if humanoid then
         humanoid.DisplayDistance = 0
+    end
+    
+    for _, obj in pairs(char:GetChildren()) do
+        if obj:IsA("BillboardGui") then
+            obj:Destroy()
+        end
     end
 end
 
@@ -48,10 +58,11 @@ local function CreatePanel()
     screenGui.ResetOnSpawn = false
     screenGui.Parent = playerGui
     
+    -- PAINEL PRINCIPAL
     local mainPanel = Instance.new("Frame")
     mainPanel.Name = "MainPanel"
     mainPanel.Size = UDim2.new(0, 350, 0, 250)
-    mainPanel.Position = UDim2.new(0.5, -175, 0.5, -125)
+    mainPanel.Position = UDim2.new(0.3, 0, 0.3, 0)
     mainPanel.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     mainPanel.BorderSizePixel = 0
     mainPanel.Parent = screenGui
@@ -65,6 +76,7 @@ local function CreatePanel()
     stroke.Thickness = 2
     stroke.Parent = mainPanel
     
+    -- HEADER
     local header = Instance.new("Frame")
     header.Name = "Header"
     header.Size = UDim2.new(1, 0, 0, 60)
@@ -87,13 +99,14 @@ local function CreatePanel()
     title.TextXAlignment = Enum.TextXAlignment.Left
     title.Parent = header
     
+    -- BOTÃO MINIMIZAR
     local minimizeBtn = Instance.new("TextButton")
     minimizeBtn.Name = "MinimizeBtn"
     minimizeBtn.Size = UDim2.new(0, 50, 0, 50)
     minimizeBtn.Position = UDim2.new(0.85, 0, 0.05, 0)
     minimizeBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 0)
     minimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    minimizeBtn.TextSize = 16
+    minimizeBtn.TextSize = 20
     minimizeBtn.Font = Enum.Font.GothamBold
     minimizeBtn.Text = "−"
     minimizeBtn.BorderSizePixel = 0
@@ -103,10 +116,11 @@ local function CreatePanel()
     minimizeCorner.CornerRadius = UDim.new(0, 8)
     minimizeCorner.Parent = minimizeBtn
     
+    -- PAINEL MINIMIZADO
     local minimizedPanel = Instance.new("Frame")
     minimizedPanel.Name = "MinimizedPanel"
     minimizedPanel.Size = UDim2.new(0, 80, 0, 80)
-    minimizedPanel.Position = UDim2.new(0.5, -40, 0.5, -40)
+    minimizedPanel.Position = UDim2.new(0.3, 0, 0.3, 0)
     minimizedPanel.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     minimizedPanel.BorderSizePixel = 0
     minimizedPanel.Visible = false
@@ -130,6 +144,7 @@ local function CreatePanel()
     emojiLabel.Text = "🥵"
     emojiLabel.Parent = minimizedPanel
     
+    -- BOTÃO INVISÍVEL
     local invisibleBtn = Instance.new("TextButton")
     invisibleBtn.Size = UDim2.new(0, 140, 0, 60)
     invisibleBtn.Position = UDim2.new(0.07, 0, 0.32, 0)
@@ -151,6 +166,7 @@ local function CreatePanel()
         visibleBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
     end)
     
+    -- BOTÃO VISÍVEL
     local visibleBtn = Instance.new("TextButton")
     visibleBtn.Size = UDim2.new(0, 140, 0, 60)
     visibleBtn.Position = UDim2.new(0.53, 0, 0.32, 0)
@@ -172,56 +188,59 @@ local function CreatePanel()
         invisibleBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
     end)
     
-    local dragging = false
-    local dragStart = nil
-    local startPos = nil
+    -- FUNÇÃO DE DRAG PARA PAINEL PRINCIPAL
+    local function UpdateMainPanelDrag(input)
+        local delta = input.Position - dragStart
+        mainPanel.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
     
     header.InputBegan:Connect(function(input, gameProcessed)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = true
             dragStart = input.Position
             startPos = mainPanel.Position
+            dragInput = input
         end
     end)
     
-    UserInputService.InputChanged:Connect(function(input, gameProcessed)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local delta = input.Position - dragStart
-            mainPanel.Position = startPos + UDim2.new(0, delta.X, 0, delta.Y)
-        end
-    end)
-    
-    UserInputService.InputEnded:Connect(function(input, gameProcessed)
+    header.InputEnded:Connect(function(input, gameProcessed)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = false
         end
     end)
     
-    local draggingMin = false
-    local dragStartMin = nil
-    local startPosMin = nil
+    -- FUNÇÃO DE DRAG PARA PAINEL MINIMIZADO
+    local function UpdateMinimizedPanelDrag(input)
+        local delta = input.Position - dragStart
+        minimizedPanel.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
     
     minimizedPanel.InputBegan:Connect(function(input, gameProcessed)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            draggingMin = true
-            dragStartMin = input.Position
-            startPosMin = minimizedPanel.Position
+            dragging = true
+            dragStart = input.Position
+            startPos = minimizedPanel.Position
+            dragInput = input
+        end
+    end)
+    
+    minimizedPanel.InputEnded:Connect(function(input, gameProcessed)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
         end
     end)
     
     UserInputService.InputChanged:Connect(function(input, gameProcessed)
-        if draggingMin and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local delta = input.Position - dragStartMin
-            minimizedPanel.Position = startPosMin + UDim2.new(0, delta.X, 0, delta.Y)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            if minimizedPanel.Visible then
+                UpdateMinimizedPanelDrag(input)
+            else
+                UpdateMainPanelDrag(input)
+            end
         end
     end)
     
-    UserInputService.InputEnded:Connect(function(input, gameProcessed)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            draggingMin = false
-        end
-    end)
-    
+    -- MINIMIZAR/MAXIMIZAR
     minimizeBtn.MouseButton1Click:Connect(function()
         isMinimized = not isMinimized
         
@@ -236,7 +255,8 @@ local function CreatePanel()
         end
     end)
     
-    minimizedPanel.MouseButton1Click:Connect(function()
+    -- CLICAR NO EMOJI PARA ABRIR
+    emojiLabel.MouseButton1Click:Connect(function()
         isMinimized = false
         mainPanel.Visible = true
         minimizedPanel.Visible = false
