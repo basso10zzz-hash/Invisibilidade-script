@@ -226,33 +226,34 @@ local function CreatePanel()
         invisibleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     end)
     
-    -- MINIMIZAR/MAXIMIZAR
+    -- MINIMIZAR/MAXIMIZAR COM BOTÃO
     minimizeBtn.MouseButton1Click:Connect(function()
         isMinimized = not isMinimized
         
         if isMinimized then
             mainPanel.Visible = false
             minimizedPanel.Visible = true
-            minimizeBtn.Text = "+"
         else
             mainPanel.Visible = true
             minimizedPanel.Visible = false
-            minimizeBtn.Text = "−"
         end
     end)
     
-    -- CLICAR NO EMOJI PARA ABRIR
-    minimizedPanel.MouseButton1Click:Connect(function()
-        isMinimized = false
-        mainPanel.Visible = true
-        minimizedPanel.Visible = false
-    end)
+    -- CLIQUE DUPLO NO EMOJI PARA ABRIR
+    local lastClickTime = 0
+    local function onEmojiClick()
+        local currentTime = tick()
+        if currentTime - lastClickTime < 0.3 then
+            -- Duplo clique
+            isMinimized = false
+            mainPanel.Visible = true
+            minimizedPanel.Visible = false
+        end
+        lastClickTime = currentTime
+    end
     
-    emojiLabel.MouseButton1Click:Connect(function()
-        isMinimized = false
-        mainPanel.Visible = true
-        minimizedPanel.Visible = false
-    end)
+    emojiLabel.MouseButton1Click:Connect(onEmojiClick)
+    minimizedPanel.MouseButton1Click:Connect(onEmojiClick)
 end
 
 CreatePanel()
