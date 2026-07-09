@@ -1,12 +1,43 @@
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 
 local isMinimized = false
-local dragging = false
-local dragInput
-local dragStart
-local startPos
+
+local function HidePlayerTag()
+    local char = LocalPlayer.Character
+    if not char then return end
+    
+    -- Remove humanoid tag
+    local humanoid = char:FindFirstChild("Humanoid")
+    if humanoid then
+        humanoid.DisplayDistance = 0
+    end
+    
+    -- Remove billboards
+    for _, obj in pairs(char:GetChildren()) do
+        if obj:IsA("BillboardGui") then
+            obj:Destroy()
+        end
+    end
+    
+    for _, obj in pairs(char:GetDescendants()) do
+        if obj:IsA("BillboardGui") then
+            obj:Destroy()
+        end
+    end
+end
+
+local function ShowPlayerTag()
+    local char = LocalPlayer.Character
+    if not char then return end
+    
+    local humanoid = char:FindFirstChild("Humanoid")
+    if humanoid then
+        humanoid.DisplayDistance = 100
+    end
+end
 
 local function MakeInvisible()
     local char = LocalPlayer.Character
@@ -18,16 +49,7 @@ local function MakeInvisible()
         end
     end
     
-    local humanoid = char:FindFirstChild("Humanoid")
-    if humanoid then
-        humanoid.DisplayDistance = 0
-    end
-    
-    for _, obj in pairs(char:GetChildren()) do
-        if obj:IsA("BillboardGui") then
-            obj:Destroy()
-        end
-    end
+    HidePlayerTag()
 end
 
 local function MakeVisible()
@@ -40,10 +62,7 @@ local function MakeVisible()
         end
     end
     
-    local humanoid = char:FindFirstChild("Humanoid")
-    if humanoid then
-        humanoid.DisplayDistance = 100
-    end
+    ShowPlayerTag()
 end
 
 local function CreatePanel()
@@ -58,13 +77,15 @@ local function CreatePanel()
     screenGui.ResetOnSpawn = false
     screenGui.Parent = playerGui
     
-    -- PAINEL PRINCIPAL
+    -- PAINEL PRINCIPAL (ALL BLACK)
     local mainPanel = Instance.new("Frame")
     mainPanel.Name = "MainPanel"
     mainPanel.Size = UDim2.new(0, 350, 0, 250)
     mainPanel.Position = UDim2.new(0.3, 0, 0.3, 0)
-    mainPanel.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    mainPanel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
     mainPanel.BorderSizePixel = 0
+    mainPanel.Draggable = true
+    mainPanel.Active = true
     mainPanel.Parent = screenGui
     
     local corner = Instance.new("UICorner")
@@ -72,15 +93,15 @@ local function CreatePanel()
     corner.Parent = mainPanel
     
     local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(0, 200, 255)
+    stroke.Color = Color3.fromRGB(255, 255, 255)
     stroke.Thickness = 2
     stroke.Parent = mainPanel
     
-    -- HEADER
+    -- HEADER (ALL BLACK)
     local header = Instance.new("Frame")
     header.Name = "Header"
     header.Size = UDim2.new(1, 0, 0, 60)
-    header.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+    header.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
     header.BorderSizePixel = 0
     header.Parent = mainPanel
     
@@ -104,7 +125,7 @@ local function CreatePanel()
     minimizeBtn.Name = "MinimizeBtn"
     minimizeBtn.Size = UDim2.new(0, 50, 0, 50)
     minimizeBtn.Position = UDim2.new(0.85, 0, 0.05, 0)
-    minimizeBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 0)
+    minimizeBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     minimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     minimizeBtn.TextSize = 20
     minimizeBtn.Font = Enum.Font.GothamBold
@@ -116,14 +137,21 @@ local function CreatePanel()
     minimizeCorner.CornerRadius = UDim.new(0, 8)
     minimizeCorner.Parent = minimizeBtn
     
-    -- PAINEL MINIMIZADO
+    local minimizeStroke = Instance.new("UIStroke")
+    minimizeStroke.Color = Color3.fromRGB(255, 255, 255)
+    minimizeStroke.Thickness = 1
+    minimizeStroke.Parent = minimizeBtn
+    
+    -- PAINEL MINIMIZADO (ALL BLACK)
     local minimizedPanel = Instance.new("Frame")
     minimizedPanel.Name = "MinimizedPanel"
     minimizedPanel.Size = UDim2.new(0, 80, 0, 80)
     minimizedPanel.Position = UDim2.new(0.3, 0, 0.3, 0)
-    minimizedPanel.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    minimizedPanel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
     minimizedPanel.BorderSizePixel = 0
     minimizedPanel.Visible = false
+    minimizedPanel.Draggable = true
+    minimizedPanel.Active = true
     minimizedPanel.Parent = screenGui
     
     local minimizedCorner = Instance.new("UICorner")
@@ -131,7 +159,7 @@ local function CreatePanel()
     minimizedCorner.Parent = minimizedPanel
     
     local minimizedStroke = Instance.new("UIStroke")
-    minimizedStroke.Color = Color3.fromRGB(0, 200, 255)
+    minimizedStroke.Color = Color3.fromRGB(255, 255, 255)
     minimizedStroke.Thickness = 2
     minimizedStroke.Parent = minimizedPanel
     
@@ -144,11 +172,11 @@ local function CreatePanel()
     emojiLabel.Text = "🥵"
     emojiLabel.Parent = minimizedPanel
     
-    -- BOTÃO INVISÍVEL
+    -- BOTÃO INVISÍVEL (ALL BLACK)
     local invisibleBtn = Instance.new("TextButton")
     invisibleBtn.Size = UDim2.new(0, 140, 0, 60)
     invisibleBtn.Position = UDim2.new(0.07, 0, 0.32, 0)
-    invisibleBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+    invisibleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     invisibleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     invisibleBtn.TextSize = 14
     invisibleBtn.Font = Enum.Font.GothamBold
@@ -160,17 +188,22 @@ local function CreatePanel()
     invisibleCorner.CornerRadius = UDim.new(0, 10)
     invisibleCorner.Parent = invisibleBtn
     
+    local invisibleStroke = Instance.new("UIStroke")
+    invisibleStroke.Color = Color3.fromRGB(255, 255, 255)
+    invisibleStroke.Thickness = 1
+    invisibleStroke.Parent = invisibleBtn
+    
     invisibleBtn.MouseButton1Click:Connect(function()
         MakeInvisible()
-        invisibleBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
-        visibleBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+        invisibleBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
+        visibleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     end)
     
-    -- BOTÃO VISÍVEL
+    -- BOTÃO VISÍVEL (ALL BLACK)
     local visibleBtn = Instance.new("TextButton")
     visibleBtn.Size = UDim2.new(0, 140, 0, 60)
     visibleBtn.Position = UDim2.new(0.53, 0, 0.32, 0)
-    visibleBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+    visibleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     visibleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     visibleBtn.TextSize = 14
     visibleBtn.Font = Enum.Font.GothamBold
@@ -182,62 +215,15 @@ local function CreatePanel()
     visibleCorner.CornerRadius = UDim.new(0, 10)
     visibleCorner.Parent = visibleBtn
     
+    local visibleStroke = Instance.new("UIStroke")
+    visibleStroke.Color = Color3.fromRGB(255, 255, 255)
+    visibleStroke.Thickness = 1
+    visibleStroke.Parent = visibleBtn
+    
     visibleBtn.MouseButton1Click:Connect(function()
         MakeVisible()
-        visibleBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
-        invisibleBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-    end)
-    
-    -- FUNÇÃO DE DRAG PARA PAINEL PRINCIPAL
-    local function UpdateMainPanelDrag(input)
-        local delta = input.Position - dragStart
-        mainPanel.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
-    
-    header.InputBegan:Connect(function(input, gameProcessed)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            dragStart = input.Position
-            startPos = mainPanel.Position
-            dragInput = input
-        end
-    end)
-    
-    header.InputEnded:Connect(function(input, gameProcessed)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
-        end
-    end)
-    
-    -- FUNÇÃO DE DRAG PARA PAINEL MINIMIZADO
-    local function UpdateMinimizedPanelDrag(input)
-        local delta = input.Position - dragStart
-        minimizedPanel.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
-    
-    minimizedPanel.InputBegan:Connect(function(input, gameProcessed)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            dragStart = input.Position
-            startPos = minimizedPanel.Position
-            dragInput = input
-        end
-    end)
-    
-    minimizedPanel.InputEnded:Connect(function(input, gameProcessed)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
-        end
-    end)
-    
-    UserInputService.InputChanged:Connect(function(input, gameProcessed)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            if minimizedPanel.Visible then
-                UpdateMinimizedPanelDrag(input)
-            else
-                UpdateMainPanelDrag(input)
-            end
-        end
+        visibleBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
+        invisibleBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     end)
     
     -- MINIMIZAR/MAXIMIZAR
@@ -256,6 +242,12 @@ local function CreatePanel()
     end)
     
     -- CLICAR NO EMOJI PARA ABRIR
+    minimizedPanel.MouseButton1Click:Connect(function()
+        isMinimized = false
+        mainPanel.Visible = true
+        minimizedPanel.Visible = false
+    end)
+    
     emojiLabel.MouseButton1Click:Connect(function()
         isMinimized = false
         mainPanel.Visible = true
@@ -268,4 +260,16 @@ CreatePanel()
 LocalPlayer.CharacterAdded:Connect(function()
     wait(1)
     CreatePanel()
+end)
+
+-- Ocultar tags dos inimigos também
+game:GetService("RunService").RenderStepped:Connect(function()
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            local humanoid = player.Character:FindFirstChild("Humanoid")
+            if humanoid then
+                humanoid.DisplayDistance = 0
+            end
+        end
+    end
 end)
