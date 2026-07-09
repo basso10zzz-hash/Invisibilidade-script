@@ -2,82 +2,143 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
 
 local isMinimized = false
 local currentDevice = "PC"
 
--- Fake device info
-local function SetDevicePC()
-    currentDevice = "PC"
+-- Override global Roblox detection variables
+local function OverrideRobloxDetection(device)
+    -- Tentar acessar e modificar variáveis globais
+    if device == "PC" then
+        -- Fake PC environment
+        _G.IsMobile = false
+        _G.IsConsole = false
+        _G.IsPC = true
+        _G.Platform = "Windows"
+        _G.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        
+    elseif device == "Mobile" then
+        _G.IsMobile = true
+        _G.IsConsole = false
+        _G.IsPC = false
+        _G.Platform = "IOS"
+        _G.UserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X)"
+        
+    elseif device == "Console" then
+        _G.IsMobile = false
+        _G.IsConsole = true
+        _G.IsPC = false
+        _G.Platform = "XboxOne"
+        _G.UserAgent = "Mozilla/5.0 (Xbox One)"
+    end
+end
+
+-- Função para injetar fake data no jogo
+local function InjectFakeData(device)
+    local char = LocalPlayer.Character
+    if not char then return end
     
-    -- Manipular USER_AGENT
-    local newUA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    
-    -- Tentar mudar informações do cliente
-    if game:FindFirstChild("CoreGui") then
-        local httpService = game:GetService("HttpService")
+    -- Método 1: Adicionar tags ao humanoid
+    local humanoid = char:FindFirstChild("Humanoid")
+    if humanoid then
+        -- Limpar tags antigas
+        local oldTag = humanoid:FindFirstChild("DeviceType")
+        if oldTag then oldTag:Destroy() end
+        local oldPlatform = humanoid:FindFirstChild("Platform")
+        if oldPlatform then oldPlatform:Destroy() end
+        
+        -- Adicionar novas tags
+        local deviceTag = Instance.new("StringValue")
+        deviceTag.Name = "DeviceType"
+        if device == "PC" then
+            deviceTag.Value = "Computer"
+        elseif device == "Mobile" then
+            deviceTag.Value = "Mobile"
+        else
+            deviceTag.Value = "Console"
+        end
+        deviceTag.Parent = humanoid
+        
+        local platformTag = Instance.new("StringValue")
+        platformTag.Name = "Platform"
+        if device == "PC" then
+            platformTag.Value = "Windows"
+        elseif device == "Mobile" then
+            platformTag.Value = "IOS"
+        else
+            platformTag.Value = "XboxOne"
+        end
+        platformTag.Parent = humanoid
     end
     
-    -- Fake de device type
-    local char = LocalPlayer.Character
-    if char then
-        local humanoid = char:FindFirstChild("Humanoid")
-        if humanoid then
-            -- Adicionar tag de PC
-            local tag = Instance.new("StringValue")
-            tag.Name = "DeviceType"
-            tag.Value = "Computer"
-            tag.Parent = humanoid
+    -- Método 2: Tentar modificar RemoteFunctions/RemoteEvents que checam device
+    local function FindAndModifyRemotes(parent, deviceName)
+        for _, v in pairs(parent:GetDescendants()) do
+            if v:IsA("RemoteFunction") or v:IsA("RemoteEvent") then
+                if v.Name:lower():find("device") or v.Name:lower():find("platform") or v.Name:lower():find("check") then
+                    -- Interceptar chamadas
+                    if v:IsA("RemoteFunction") then
+                        local oldInvoke = v.InvokeServer
+                        function v:InvokeServer(...)
+                            local args = {...}
+                            if tostring(args[1]):lower():find("device") or tostring(args[1]):lower():find("platform") then
+                                return deviceName
+                            end
+                            return oldInvoke(v, ...)
+                        end
+                    end
+                end
+            end
         end
     end
+    
+    FindAndModifyRemotes(game.ReplicatedStorage, device)
+    FindAndModifyRemotes(game.ServerScriptService, device)
+end
+
+-- Funções de device
+local function SetDevicePC()
+    currentDevice = "PC"
+    OverrideRobloxDetection("PC")
+    InjectFakeData("PC")
 end
 
 local function SetDeviceMobile()
     currentDevice = "Mobile"
-    
-    local char = LocalPlayer.Character
-    if char then
-        local humanoid = char:FindFirstChild("Humanoid")
-        if humanoid then
-            local tag = humanoid:FindFirstChild("DeviceType")
-            if tag then tag:Destroy() end
-            
-            tag = Instance.new("StringValue")
-            tag.Name = "DeviceType"
-            tag.Value = "Mobile"
-            tag.Parent = humanoid
-        end
-    end
+    OverrideRobloxDetection("Mobile")
+    InjectFakeData("Mobile")
 end
 
 local function SetDeviceConsole()
     currentDevice = "Console"
+    OverrideRobloxDetection("Console")
+    InjectFakeData("Console")
+end
+
+-- Manter fake data sempre ativa
+RunService.Heartbeat:Connect(function()
+    if currentDevice == "PC" then
+        _G.IsMobile = false
+        _G.IsConsole = false
+        _G.IsPC = true
+    elseif currentDevice == "Mobile" then
+        _G.IsMobile = true
+        _G.IsConsole = false
+        _G.IsPC = false
+    elseif currentDevice == "Console" then
+        _G.IsMobile = false
+        _G.IsConsole = true
+        _G.IsPC = false
+    end
     
     local char = LocalPlayer.Character
     if char then
         local humanoid = char:FindFirstChild("Humanoid")
         if humanoid then
-            local tag = humanoid:FindFirstChild("DeviceType")
-            if tag then tag:Destroy() end
-            
-            tag = Instance.new("StringValue")
-            tag.Name = "DeviceType"
-            tag.Value = "Console"
-            tag.Parent = humanoid
-        end
-    end
-end
-
--- Interceptar chamadas do jogo que checam device
-game:GetService("RunService").Heartbeat:Connect(function()
-    local char = LocalPlayer.Character
-    if char then
-        local humanoid = char:FindFirstChild("Humanoid")
-        if humanoid then
-            if currentDevice == "PC" then
-                if not humanoid:FindFirstChild("DeviceType") or humanoid.DeviceType.Value ~= "Computer" then
-                    SetDevicePC()
-                end
+            local deviceTag = humanoid:FindFirstChild("DeviceType")
+            if not deviceTag then
+                InjectFakeData(currentDevice)
             end
         end
     end
