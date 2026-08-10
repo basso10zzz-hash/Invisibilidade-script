@@ -1,0 +1,631 @@
+--// INFINIT SCRIPT - POSITION PANEL
+--// Visual premium + 4 posições + salvar/teleportar/apagar
+--// Arrastar corrigido para PC + CELULAR
+--// Painel sempre abre no centro
+--// Botão minimizado mantém sua posição
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+
+local Player = Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
+
+local SavedPositions = {}
+local MAX_SLOTS = 4
+
+--// CORES
+local BG = Color3.fromRGB(12, 12, 15)
+local HEADER = Color3.fromRGB(20, 20, 24)
+local CARD = Color3.fromRGB(23, 23, 28)
+local INPUT = Color3.fromRGB(31, 31, 37)
+local BUTTON = Color3.fromRGB(40, 40, 47)
+local BUTTON_HOVER = Color3.fromRGB(55, 55, 64)
+local STROKE = Color3.fromRGB(62, 62, 72)
+local TEXT = Color3.fromRGB(245, 245, 248)
+local SUBTEXT = Color3.fromRGB(145, 145, 155)
+
+--// GUI
+local Gui = Instance.new("ScreenGui")
+Gui.Name = "CrownPositionPanel"
+Gui.ResetOnSpawn = false
+Gui.IgnoreGuiInset = true
+Gui.Parent = PlayerGui
+
+--// SOMBRA
+local Shadow = Instance.new("Frame")
+Shadow.Name = "Shadow"
+Shadow.Size = UDim2.new(0, 520, 0, 520)
+Shadow.Position = UDim2.new(0.5, -260, 0.5, -250)
+Shadow.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Shadow.BackgroundTransparency = 0.55
+Shadow.BorderSizePixel = 0
+Shadow.ZIndex = 0
+Shadow.Parent = Gui
+
+local ShadowCorner = Instance.new("UICorner")
+ShadowCorner.CornerRadius = UDim.new(0, 24)
+ShadowCorner.Parent = Shadow
+
+--// PAINEL
+local Main = Instance.new("Frame")
+Main.Name = "Main"
+Main.Size = UDim2.new(0, 500, 0, 500)
+Main.Position = UDim2.new(0.5, -250, 0.5, -250)
+Main.BackgroundColor3 = BG
+Main.BorderSizePixel = 0
+Main.Active = true
+Main.ZIndex = 2
+Main.Parent = Gui
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 20)
+MainCorner.Parent = Main
+
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Color = STROKE
+MainStroke.Thickness = 1.5
+MainStroke.Transparency = 0.15
+MainStroke.Parent = Main
+
+--// HEADER
+local Header = Instance.new("Frame")
+Header.Name = "Header"
+Header.Size = UDim2.new(1, 0, 0, 82)
+Header.BackgroundColor3 = HEADER
+Header.BorderSizePixel = 0
+Header.Active = true
+Header.ZIndex = 3
+Header.Parent = Main
+
+local HeaderCorner = Instance.new("UICorner")
+HeaderCorner.CornerRadius = UDim.new(0, 20)
+HeaderCorner.Parent = Header
+
+--// ÍCONE 卐
+local CrownIcon = Instance.new("TextLabel")
+CrownIcon.Name = "CrownIcon"
+CrownIcon.Size = UDim2.new(0, 52, 0, 52)
+CrownIcon.Position = UDim2.new(0, 16, 0, 15)
+CrownIcon.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
+CrownIcon.Text = "卐"
+CrownIcon.TextColor3 = TEXT
+CrownIcon.TextSize = 28
+CrownIcon.Font = Enum.Font.SourceSans
+CrownIcon.BorderSizePixel = 0
+CrownIcon.Active = true
+CrownIcon.ZIndex = 4
+CrownIcon.Parent = Header
+
+local CrownCorner = Instance.new("UICorner")
+CrownCorner.CornerRadius = UDim.new(0, 14)
+CrownCorner.Parent = CrownIcon
+
+local CrownStroke = Instance.new("UIStroke")
+CrownStroke.Color = STROKE
+CrownStroke.Thickness = 1
+CrownStroke.Parent = CrownIcon
+
+--// TÍTULO
+local Title = Instance.new("TextLabel")
+Title.Name = "Title"
+Title.Size = UDim2.new(1, -170, 0, 30)
+Title.Position = UDim2.new(0, 82, 0, 12)
+Title.BackgroundTransparency = 1
+Title.Text = "INFINIT SCRIPT"
+Title.TextColor3 = TEXT
+Title.TextSize = 20
+Title.Font = Enum.Font.GothamBold
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Active = true
+Title.ZIndex = 4
+Title.Parent = Header
+
+--// SUBTÍTULO
+local Subtitle = Instance.new("TextLabel")
+Subtitle.Name = "Subtitle"
+Subtitle.Size = UDim2.new(1, -170, 0, 22)
+Subtitle.Position = UDim2.new(0, 82, 0, 42)
+Subtitle.BackgroundTransparency = 1
+Subtitle.Text = "GERENCIADOR DE POSIÇÕES"
+Subtitle.TextColor3 = SUBTEXT
+Subtitle.TextSize = 10
+Subtitle.Font = Enum.Font.GothamMedium
+Subtitle.TextXAlignment = Enum.TextXAlignment.Left
+Subtitle.Active = true
+Subtitle.ZIndex = 4
+Subtitle.Parent = Header
+
+--// BOTÃO MINIMIZAR
+local Minimize = Instance.new("TextButton")
+Minimize.Name = "Minimize"
+Minimize.Size = UDim2.new(0, 46, 0, 46)
+Minimize.Position = UDim2.new(1, -62, 0, 18)
+Minimize.BackgroundColor3 = BUTTON
+Minimize.Text = "—"
+Minimize.TextColor3 = TEXT
+Minimize.TextSize = 22
+Minimize.Font = Enum.Font.GothamBold
+Minimize.BorderSizePixel = 0
+Minimize.AutoButtonColor = false
+Minimize.ZIndex = 5
+Minimize.Parent = Header
+
+local MinCorner = Instance.new("UICorner")
+MinCorner.CornerRadius = UDim.new(0, 13)
+MinCorner.Parent = Minimize
+
+local MinStroke = Instance.new("UIStroke")
+MinStroke.Color = STROKE
+MinStroke.Thickness = 1
+MinStroke.Parent = Minimize
+
+--// CONTEÚDO
+local Content = Instance.new("Frame")
+Content.Name = "Content"
+Content.Size = UDim2.new(1, -30, 1, -98)
+Content.Position = UDim2.new(0, 15, 0, 91)
+Content.BackgroundTransparency = 1
+Content.ZIndex = 3
+Content.Parent = Main
+
+local Layout = Instance.new("UIListLayout")
+Layout.Padding = UDim.new(0, 10)
+Layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+Layout.SortOrder = Enum.SortOrder.LayoutOrder
+Layout.Parent = Content
+
+--// ANIMAÇÃO
+local function Tween(Object, Properties, Time)
+    TweenService:Create(
+        Object,
+        TweenInfo.new(
+            Time or 0.15,
+            Enum.EasingStyle.Quart,
+            Enum.EasingDirection.Out
+        ),
+        Properties
+    ):Play()
+end
+
+--// EFEITO DOS BOTÕES
+local function ButtonEffect(Button, NormalColor)
+
+    Button.MouseEnter:Connect(function()
+        Tween(Button, {
+            BackgroundColor3 = BUTTON_HOVER
+        }, 0.12)
+    end)
+
+    Button.MouseLeave:Connect(function()
+        Tween(Button, {
+            BackgroundColor3 = NormalColor
+        }, 0.12)
+    end)
+
+    Button.MouseButton1Down:Connect(function()
+        Tween(Button, {
+            Size = UDim2.new(
+                Button.Size.X.Scale,
+                Button.Size.X.Offset - 2,
+                Button.Size.Y.Scale,
+                Button.Size.Y.Offset - 2
+            )
+        }, 0.08)
+    end)
+
+    Button.MouseButton1Up:Connect(function()
+        Tween(Button, {
+            Size = UDim2.new(
+                Button.Size.X.Scale,
+                Button.Size.X.Offset + 2,
+                Button.Size.Y.Scale,
+                Button.Size.Y.Offset + 2
+            )
+        }, 0.08)
+    end)
+end
+
+--// PEGAR ROOT
+local function GetRoot()
+
+    local Character = Player.Character
+
+    if not Character then
+        Character = Player.CharacterAdded:Wait()
+    end
+
+    return Character:FindFirstChild("HumanoidRootPart")
+end
+
+--// ATUALIZAR SOMBRA
+local function UpdateShadow()
+
+    Shadow.Position = UDim2.new(
+        Main.Position.X.Scale,
+        Main.Position.X.Offset - 10,
+        Main.Position.Y.Scale,
+        Main.Position.Y.Offset + 10
+    )
+end
+
+--// SISTEMA DE ARRASTAR
+local function MakeDraggable(Object, DragArea, TargetObject)
+
+    TargetObject = TargetObject or Object
+
+    local Dragging = false
+    local DragStart = nil
+    local StartPosition = nil
+
+    DragArea.InputBegan:Connect(function(Input)
+
+        if Input.UserInputType == Enum.UserInputType.MouseButton1
+        or Input.UserInputType == Enum.UserInputType.Touch then
+
+            Dragging = true
+            DragStart = Input.Position
+            StartPosition = TargetObject.Position
+
+            Input.Changed:Connect(function()
+
+                if Input.UserInputState == Enum.UserInputState.End then
+                    Dragging = false
+                end
+
+            end)
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(Input)
+
+        if not Dragging then
+            return
+        end
+
+        if Input.UserInputType == Enum.UserInputType.MouseMovement
+        or Input.UserInputType == Enum.UserInputType.Touch then
+
+            local Delta = Input.Position - DragStart
+
+            TargetObject.Position = UDim2.new(
+                StartPosition.X.Scale,
+                StartPosition.X.Offset + Delta.X,
+                StartPosition.Y.Scale,
+                StartPosition.Y.Offset + Delta.Y
+            )
+
+            if TargetObject == Main then
+                UpdateShadow()
+            end
+        end
+    end)
+end
+
+--// ARRASTAR PELO HEADER
+MakeDraggable(Main, Header, Main)
+
+--// ARRASTAR PELO ÍCONE
+MakeDraggable(Main, CrownIcon, Main)
+
+--// ARRASTAR PELO TÍTULO
+MakeDraggable(Main, Title, Main)
+
+--// ARRASTAR PELO SUBTÍTULO
+MakeDraggable(Main, Subtitle, Main)
+
+--// 4 SLOTS
+for i = 1, MAX_SLOTS do
+
+    local Slot = Instance.new("Frame")
+    Slot.Name = "PositionSlot" .. i
+    Slot.Size = UDim2.new(1, 0, 0, 82)
+    Slot.BackgroundColor3 = CARD
+    Slot.BorderSizePixel = 0
+    Slot.LayoutOrder = i
+    Slot.ZIndex = 4
+    Slot.Parent = Content
+
+    local SlotCorner = Instance.new("UICorner")
+    SlotCorner.CornerRadius = UDim.new(0, 14)
+    SlotCorner.Parent = Slot
+
+    local SlotStroke = Instance.new("UIStroke")
+    SlotStroke.Color = STROKE
+    SlotStroke.Thickness = 1
+    SlotStroke.Transparency = 0.2
+    SlotStroke.Parent = Slot
+
+    --// NÚMERO
+    local Number = Instance.new("TextLabel")
+    Number.Name = "Number"
+    Number.Size = UDim2.new(0, 38, 0, 38)
+    Number.Position = UDim2.new(0, 10, 0.5, -19)
+    Number.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
+    Number.Text = string.format("%02d", i)
+    Number.TextColor3 = TEXT
+    Number.TextSize = 12
+    Number.Font = Enum.Font.GothamBold
+    Number.BorderSizePixel = 0
+    Number.ZIndex = 5
+    Number.Parent = Slot
+
+    local NumberCorner = Instance.new("UICorner")
+    NumberCorner.CornerRadius = UDim.new(0, 11)
+    NumberCorner.Parent = Number
+
+    --// NOME
+    local NameBox = Instance.new("TextBox")
+    NameBox.Name = "NameBox"
+    NameBox.Size = UDim2.new(0, 135, 0, 38)
+    NameBox.Position = UDim2.new(0, 56, 0.5, -19)
+    NameBox.BackgroundColor3 = INPUT
+    NameBox.PlaceholderText = "Nome da posição"
+    NameBox.PlaceholderColor3 = Color3.fromRGB(105, 105, 115)
+    NameBox.Text = ""
+    NameBox.TextColor3 = TEXT
+    NameBox.TextSize = 11
+    NameBox.Font = Enum.Font.Gotham
+    NameBox.ClearTextOnFocus = false
+    NameBox.BorderSizePixel = 0
+    NameBox.ZIndex = 5
+    NameBox.Parent = Slot
+
+    local NameCorner = Instance.new("UICorner")
+    NameCorner.CornerRadius = UDim.new(0, 10)
+    NameCorner.Parent = NameBox
+
+    local NameStroke = Instance.new("UIStroke")
+    NameStroke.Color = STROKE
+    NameStroke.Thickness = 1
+    NameStroke.Transparency = 0.35
+    NameStroke.Parent = NameBox
+
+    --// SALVAR
+    local Save = Instance.new("TextButton")
+    Save.Name = "Save"
+    Save.Size = UDim2.new(0, 73, 0, 38)
+    Save.Position = UDim2.new(0, 198, 0.5, -19)
+    Save.BackgroundColor3 = BUTTON
+    Save.Text = "SALVAR"
+    Save.TextColor3 = TEXT
+    Save.TextSize = 10
+    Save.Font = Enum.Font.GothamBold
+    Save.BorderSizePixel = 0
+    Save.AutoButtonColor = false
+    Save.ZIndex = 5
+    Save.Parent = Slot
+
+    local SaveCorner = Instance.new("UICorner")
+    SaveCorner.CornerRadius = UDim.new(0, 10)
+    SaveCorner.Parent = Save
+
+    ButtonEffect(Save, BUTTON)
+
+    --// TELEPORTE
+    local Teleport = Instance.new("TextButton")
+    Teleport.Name = "Teleport"
+    Teleport.Size = UDim2.new(0, 91, 0, 38)
+    Teleport.Position = UDim2.new(0, 279, 0.5, -19)
+    Teleport.BackgroundColor3 = BUTTON
+    Teleport.Text = "TELEPORTE"
+    Teleport.TextColor3 = TEXT
+    Teleport.TextSize = 10
+    Teleport.Font = Enum.Font.GothamBold
+    Teleport.BorderSizePixel = 0
+    Teleport.AutoButtonColor = false
+    Teleport.ZIndex = 5
+    Teleport.Parent = Slot
+
+    local TeleportCorner = Instance.new("UICorner")
+    TeleportCorner.CornerRadius = UDim.new(0, 10)
+    TeleportCorner.Parent = Teleport
+
+    ButtonEffect(Teleport, BUTTON)
+
+    --// APAGAR
+    local Delete = Instance.new("TextButton")
+    Delete.Name = "Delete"
+    Delete.Size = UDim2.new(0, 38, 0, 38)
+    Delete.Position = UDim2.new(1, -48, 0.5, -19)
+    Delete.BackgroundColor3 = BUTTON
+    Delete.Text = "×"
+    Delete.TextColor3 = Color3.fromRGB(205, 205, 212)
+    Delete.TextSize = 21
+    Delete.Font = Enum.Font.Gotham
+    Delete.BorderSizePixel = 0
+    Delete.AutoButtonColor = false
+    Delete.ZIndex = 5
+    Delete.Parent = Slot
+
+    local DeleteCorner = Instance.new("UICorner")
+    DeleteCorner.CornerRadius = UDim.new(0, 10)
+    DeleteCorner.Parent = Delete
+
+    ButtonEffect(Delete, BUTTON)
+
+    --// SALVAR POSIÇÃO
+    Save.MouseButton1Click:Connect(function()
+
+        local Root = GetRoot()
+
+        if Root then
+
+            SavedPositions[i] = Root.CFrame
+
+            if NameBox.Text == "" then
+                NameBox.Text = "Posição " .. i
+            end
+
+            Save.Text = "SALVO ✓"
+
+            task.delay(1, function()
+
+                if Save and Save.Parent then
+                    Save.Text = "SALVAR"
+                end
+
+            end)
+        end
+    end)
+
+    --// TELEPORTAR
+    Teleport.MouseButton1Click:Connect(function()
+
+        if SavedPositions[i] then
+
+            local Root = GetRoot()
+
+            if Root then
+
+                Root.CFrame = SavedPositions[i]
+
+                Teleport.Text = "OK ✓"
+
+                task.delay(0.8, function()
+
+                    if Teleport and Teleport.Parent then
+                        Teleport.Text = "TELEPORTE"
+                    end
+
+                end)
+            end
+
+        else
+
+            Teleport.Text = "NÃO SALVO"
+
+            task.delay(0.8, function()
+
+                if Teleport and Teleport.Parent then
+                    Teleport.Text = "TELEPORTE"
+                end
+
+            end)
+        end
+    end)
+
+    --// APAGAR
+    Delete.MouseButton1Click:Connect(function()
+
+        SavedPositions[i] = nil
+        NameBox.Text = ""
+
+        Delete.Text = "✓"
+
+        task.delay(0.5, function()
+
+            if Delete and Delete.Parent then
+                Delete.Text = "×"
+            end
+
+        end)
+    end)
+end
+
+--// BOTÃO MINIMIZADO
+local MiniButton = Instance.new("TextButton")
+MiniButton.Name = "MiniButton"
+MiniButton.Size = UDim2.new(0, 70, 0, 70)
+
+MiniButton.Position = UDim2.new(
+    Main.Position.X.Scale,
+    Main.Position.X.Offset + 215,
+    Main.Position.Y.Scale,
+    Main.Position.Y.Offset + 215
+)
+
+MiniButton.BackgroundColor3 = BG
+MiniButton.Text = "卐"
+MiniButton.TextColor3 = TEXT
+MiniButton.TextSize = 36
+MiniButton.Font = Enum.Font.SourceSans
+MiniButton.BorderSizePixel = 0
+MiniButton.AutoButtonColor = false
+MiniButton.Visible = false
+MiniButton.Active = true
+MiniButton.ZIndex = 10
+MiniButton.Parent = Gui
+
+local MiniCorner = Instance.new("UICorner")
+MiniCorner.CornerRadius = UDim.new(1, 0)
+MiniCorner.Parent = MiniButton
+
+local MiniStroke = Instance.new("UIStroke")
+MiniStroke.Color = STROKE
+MiniStroke.Thickness = 2
+MiniStroke.Parent = MiniButton
+
+--// ARRASTAR MINI
+MakeDraggable(MiniButton, MiniButton, MiniButton)
+
+--// MINIMIZAR
+Minimize.MouseEnter:Connect(function()
+
+    Tween(Minimize, {
+        BackgroundColor3 = BUTTON_HOVER
+    }, 0.12)
+
+end)
+
+Minimize.MouseLeave:Connect(function()
+
+    Tween(Minimize, {
+        BackgroundColor3 = BUTTON
+    }, 0.12)
+
+end)
+
+Minimize.MouseButton1Click:Connect(function()
+
+    -- O botão fica onde o painel estava
+    MiniButton.Position = UDim2.new(
+        Main.Position.X.Scale,
+        Main.Position.X.Offset + 215,
+        Main.Position.Y.Scale,
+        Main.Position.Y.Offset + 215
+    )
+
+    Shadow.Visible = false
+    Main.Visible = false
+    MiniButton.Visible = true
+
+end)
+
+--// ABRIR
+MiniButton.MouseEnter:Connect(function()
+
+    Tween(MiniButton, {
+        Size = UDim2.new(0, 76, 0, 76)
+    }, 0.15)
+
+end)
+
+MiniButton.MouseLeave:Connect(function()
+
+    Tween(MiniButton, {
+        Size = UDim2.new(0, 70, 0, 70)
+    }, 0.15)
+
+end)
+
+MiniButton.MouseButton1Click:Connect(function()
+
+    --// SEMPRE ABRE NO CENTRO DA TELA
+    Main.Position = UDim2.new(
+        0.5,
+        -250,
+        0.5,
+        -250
+    )
+
+    UpdateShadow()
+
+    MiniButton.Visible = false
+    Shadow.Visible = true
+    Main.Visible = true
+
+end)
+
+--// POSIÇÃO INICIAL DA SOMBRA
+UpdateShadow()
